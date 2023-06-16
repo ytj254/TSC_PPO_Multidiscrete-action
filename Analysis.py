@@ -1,7 +1,7 @@
 from xml.dom.minidom import parse
 import xml.dom.minidom
 import numpy as np
-from sim_tsp import car_occupancy, bus_occupancy
+from SumoEnv import car_occupancy, bus_occupancy
 
 
 def analysis(input_path):

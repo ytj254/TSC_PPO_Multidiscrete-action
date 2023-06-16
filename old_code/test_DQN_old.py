@@ -12,7 +12,7 @@ from gymnasium.wrappers.normalize import NormalizeObservation, NormalizeReward
 
 timestamp_start = datetime.datetime.now()
 local = time.strftime('%Y-%m-%d-%H-%M-%S')
-result_path = os.path.join('result', local)
+result_path = os.path.join('../result', local)
 create_result_folder(result_path)
 model_path = 'models/2023-06-05-14-02-18/2023-06-05-14-02-18.zip'
 

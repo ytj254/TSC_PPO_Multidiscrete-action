@@ -47,7 +47,7 @@ def main_training():
 def main_testing():
     timestamp_start = datetime.datetime.now()
     local = time.strftime('%Y-%m-%d-%H-%M-%S')
-    result_path = os.path.join('result', local)
+    result_path = os.path.join('../result', local)
     create_result_folder(result_path)
     model_path = 'models\\18'
     model = DQN(model_path=model_path)
