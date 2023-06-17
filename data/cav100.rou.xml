@@ -45,8 +45,8 @@
         <flow id="WN.cv" begin="0" end="4500" probability="0.07" from="E0" to="-E1" departSpeed="max" type="cv" departLane="best" depart="0"/>
 
 
-    <flow id="BNS" begin="0" end="4500" period="300" from="E1" to="E3" departSpeed="max" type="bus" departLane="best" depart="0"/>
-    <flow id="BSN" begin="120" end="4500" period="300" from="-E3" to="-E1" departSpeed="max" type="bus" departLane="best" depart="0"/>
+<!--    <flow id="BNS" begin="0" end="4500" period="300" from="E1" to="E3" departSpeed="max" type="bus" departLane="best" depart="0"/>-->
+<!--    <flow id="BSN" begin="120" end="4500" period="300" from="-E3" to="-E1" departSpeed="max" type="bus" departLane="best" depart="0"/>-->
 
 </routes>
 
