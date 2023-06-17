@@ -13,7 +13,7 @@ n_channels = 2
 width = 16
 height = int(detection_length / cell_length)
 car_occupancy = 1
-bus_occupancy = 30
+bus_occupancy = 1
 min_left_green_time = 5
 min_through_green_time = 12
 
