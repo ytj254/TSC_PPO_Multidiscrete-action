@@ -133,7 +133,7 @@ def learn():
         "learning_rate": lr,
         "buffer_size": 50000,
         "learning_starts": 2500,
-        "batch_size": 64,
+        "batch_size": 32,
         "gamma": gamma,
         "train_freq": 4,
         "gradient_steps": 1,

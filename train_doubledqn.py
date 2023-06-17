@@ -130,7 +130,7 @@ def learn():
     env = VecMonitor(env, log_dir)
 
     hyperparams = {
-        "learning_rate": lr,
+        "learning_rate": 0.001,
         "buffer_size": 50000,
         "learning_starts": 2500,
         "batch_size": 32,
