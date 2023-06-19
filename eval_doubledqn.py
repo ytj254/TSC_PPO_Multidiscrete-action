@@ -3,7 +3,7 @@ import datetime
 import numpy as np
 
 from utils import *
-from Analysis import analysis
+from Analysis import analysis_cv as analysis
 from SumoEnv import SumoEnv
 
 from DoubleDQN import DoubleDQN
@@ -37,16 +37,17 @@ def new_step_wait(self) -> VecEnvStepReturn:
 DummyVecEnv.step_wait = new_step_wait
 
 
-def test():
-    # Best model
-    model_path = 'models/DoubleDQN-2023-06-16_2/best_model.zip'
-    model = DoubleDQN.load(model_path)
-    stats_path = 'models/DoubleDQN-2023-06-16_2/best_vec_normalize.pkl'
-
-    # Final model
-    # model_path = 'models/DoubleDQN-2023-06-16_2/final_model.zip'
-    # model = DoubleDQN.load(model_path)
-    # stats_path = 'models/DoubleDQN-2023-06-16_2/vec_normalize.pkl'
+def test(best_model=False):
+    if best_model:
+        # Best model
+        model_path = 'models/DoubleDQN-2023-06-19_2/best_model.zip'
+        model = DoubleDQN.load(model_path)
+        stats_path = 'models/DoubleDQN-2023-06-19_2/best_vec_normalize.pkl'
+    else:
+        # Final model
+        model_path = 'models/DoubleDQN-2023-06-19_2/final_model.zip'
+        model = DoubleDQN.load(model_path)
+        stats_path = 'models/DoubleDQN-2023-06-19_2/vec_normalize.pkl'
 
     start_time = time.time()
     model_dir_name = model_path.split('/')[1]
@@ -80,10 +81,11 @@ def test():
         res = analysis(file_path)
         totres.append(res)
 
-    ares = np.reshape(totres, (n, 18))
+    ares = np.reshape(totres, (n, len(res)))
     np.savetxt(result_path + '_totalresult.csv', ares, delimiter=',')
     print(f'Evaluating time: {datetime.timedelta(seconds=int(time.time() - start_time))}')
 
 
 if __name__ == '__main__':
-    test()
+    # test()
+    test(best_model=True)
