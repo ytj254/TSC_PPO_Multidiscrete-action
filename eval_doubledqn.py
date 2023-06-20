@@ -38,16 +38,17 @@ DummyVecEnv.step_wait = new_step_wait
 
 
 def test(best_model=False):
+    models_path = 'models/DoubleDQN-2023-06-19_3'
     if best_model:
         # Best model
-        model_path = 'models/DoubleDQN-2023-06-19_2/best_model.zip'
+        model_path = f'{models_path}/best_model.zip'
         model = DoubleDQN.load(model_path)
-        stats_path = 'models/DoubleDQN-2023-06-19_2/best_vec_normalize.pkl'
+        stats_path = f'{models_path}/best_vec_normalize.pkl'
     else:
         # Final model
-        model_path = 'models/DoubleDQN-2023-06-19_2/final_model.zip'
+        model_path = f'{models_path}/final_model.zip'
         model = DoubleDQN.load(model_path)
-        stats_path = 'models/DoubleDQN-2023-06-19_2/vec_normalize.pkl'
+        stats_path = f'{models_path}/vec_normalize.pkl'
 
     start_time = time.time()
     model_dir_name = model_path.split('/')[1]
