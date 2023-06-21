@@ -37,21 +37,39 @@ action_state_map = {
 
 
 class SumoEnv(gym.Env):
-    """Custom Environment that follows gym interface"""
+    """Custom Environment that follows gym interface
+    :param obs_type: Sets the output type ('img': image, 'vec': vector, 'comb': combined)
+    for observations in the environment.
+    :param cv_det: Controls whether the only CV detection mode turn on or off.
+    """
 
     metadata = {'render.modes': ['human', 'rgb_array']}
 
-    def __init__(self, sumo_cmd):
+    def __init__(self, sumo_cmd, obs_type='img', cv_det=False):
         super(SumoEnv, self).__init__()
         # Define action and observation space
         # They must be gym.spaces objects
-        # Example when using discrete actions:
-
+        # Initiate action space:
         self.action_space = spaces.Discrete(8)
-        # Example for using image as input:
-        self.observation_space = spaces.Box(low=0, high=255,
-                                            shape=(n_channels, height, width), dtype=np.uint8)
 
+        # Initiate observation space:
+        self.obs_type = obs_type
+
+        if self.obs_type == 'comb':
+            self.observation_space = spaces.Dict(
+                {
+                    'img': spaces.Box(low=0, high=255, shape=(n_channels, height, width), dtype=np.uint8),
+                    'vec': spaces.Box(low=0, high=1, shape=(width,), dtype=np.float64),
+                }
+            )
+
+        elif self.obs_type == 'vec':
+            self.observation_space = spaces.Box(low=0, high=1, shape=(width,), dtype=np.float64)
+
+        else:
+            self.observation_space = spaces.Box(low=0, high=255, shape=(n_channels, height, width), dtype=np.uint8)
+
+        self.cv_det = cv_det
         self.episode = 0
         self.total_rewards = []
         self.sumo_cmd = sumo_cmd
@@ -134,7 +152,8 @@ class SumoEnv(gym.Env):
 
     # Get the state
     def get_state(self):
-        state = np.zeros((n_channels, height, width))
+        img_state = np.zeros((n_channels, height, width))
+        queue_state = np.zeros(width)
         tot_person_delay = 0
 
         for veh_id in traci.vehicle.getIDList():
@@ -142,39 +161,97 @@ class SumoEnv(gym.Env):
                                              tc.VAR_TIMELOSS))
         p = traci.vehicle.getAllSubscriptionResults()
         for x in p:
-            if p[x][tc.VAR_NEXT_TLS]:
-                ps_tls = p[x][tc.VAR_NEXT_TLS][0][2]  # get the distance to the traffic light
+            v_type = p[x][tc.VAR_TYPE]
+            # Not the only cv detection mode
+            if not self.cv_det:
+                if p[x][tc.VAR_NEXT_TLS]:
+                    ps_tls = p[x][tc.VAR_NEXT_TLS][0][2]  # get the distance to the traffic light
+                else:
+                    ps_tls = -1  # vehicle crossing the stop line is set to a negative value
+
+                if p[x][tc.VAR_LANE_ID]:
+                    ln_id, ln_idx = p[x][tc.VAR_LANE_ID].split('_')  # get the lane id and index
+
+                spd = p[x][tc.VAR_SPEED]  # get the speed
+
+                if ps_tls > 0:  # vehicle not crossing the stop line
+                    delay = p[x][tc.VAR_TIMELOSS]
+                else:  # vehicle already crossing the stop line
+                    delay = 0
+
+                # get the vehicle type and assign the occupancy
+                if v_type == 'car':
+                    v_occupancy = car_occupancy
+                    person_delay = delay * car_occupancy
+                else:
+                    v_occupancy = bus_occupancy
+                    person_delay = delay * bus_occupancy
+                tot_person_delay += person_delay
+
+                # get the position in state array
+                if 0 < ps_tls < detection_length:
+                    height_index = int(ps_tls / cell_length)
+                    for edge in edges.values():
+                        if edge[1] in ln_id:
+                            width_index = int(ln_idx) + edge[0]
+                            img_state[:, height_index, width_index] = (v_occupancy, spd)
+            # The only cv detection mode on
             else:
-                ps_tls = -1  # vehicle crossing the stop line is set to a negative value
+                if v_type == 'cv' or v_type == 'bus':
+                    if p[x][tc.VAR_NEXT_TLS]:
+                        ps_tls = p[x][tc.VAR_NEXT_TLS][0][2]  # get the distance to the traffic light
+                    else:
+                        ps_tls = -1  # vehicle crossing the stop line is set to a negative value
 
-            if p[x][tc.VAR_LANE_ID]:
-                ln_id, ln_idx = p[x][tc.VAR_LANE_ID].split('_')  # get the lane id and index
+                    if p[x][tc.VAR_LANE_ID]:
+                        ln_id, ln_idx = p[x][tc.VAR_LANE_ID].split('_')  # get the lane id and index
 
-            spd = p[x][tc.VAR_SPEED]  # get the speed
+                    spd = p[x][tc.VAR_SPEED]  # get the speed
 
-            if ps_tls > 0:  # vehicle not crossing the stop line
-                delay = p[x][tc.VAR_TIMELOSS]
-            else:  # vehicle already crossing the stop line
-                delay = 0
+                    if ps_tls > 0:  # vehicle not crossing the stop line
+                        delay = p[x][tc.VAR_TIMELOSS]
+                    else:  # vehicle already crossing the stop line
+                        delay = 0
 
-            # get the vehicle type and assign the occupancy
-            if p[x][tc.VAR_TYPE] == 'car':
-                v_occupancy = car_occupancy
-                person_delay = delay * car_occupancy
-            else:
-                v_occupancy = bus_occupancy
-                person_delay = delay * bus_occupancy
-            tot_person_delay += person_delay
+                    # get the vehicle type and assign the occupancy
+                    if v_type == 'cv':
+                        v_occupancy = car_occupancy
+                        person_delay = delay * car_occupancy
+                    else:
+                        v_occupancy = bus_occupancy
+                        person_delay = delay * bus_occupancy
+                    tot_person_delay += person_delay
 
-            # get the position in state array
-            if 0 < ps_tls < detection_length:
-                height_index = int(ps_tls / cell_length)
-                for edge in edges.values():
-                    if edge[1] in ln_id:
-                        width_index = int(ln_idx) + edge[0]
-                        # state[:, height_index, width_index] = ((v_occupancy * 255 / 70), (spd * 255 / 30))
-                        state[:, height_index, width_index] = (v_occupancy, spd)
-        return state.astype(np.uint8), tot_person_delay
+                    # get the position in state array
+                    if 0 < ps_tls < detection_length:
+                        height_index = int(ps_tls / cell_length)
+                        for edge in edges.values():
+                            if edge[1] in ln_id:
+                                width_index = int(ln_idx) + edge[0]
+                                img_state[:, height_index, width_index] = (v_occupancy, spd)
+
+        # Count the stopped vehicles on each lane, speed <= 0.1
+        for edge in edges.values():
+            for i in range(4):
+                width_index = i + edge[0]
+                ln_id = f'{edge[1]}_{i}'
+                queue_state[width_index] = traci.lane.getLastStepHaltingNumber(ln_id)
+
+        img_state = img_state.astype(np.uint8)
+        queue_state = queue_state / 50  # 50 is the maximum number of vehicles on one lane
+
+        # Output obs according to the obs type
+        if self.obs_type == 'comb':
+            state = {
+                'img': img_state,
+                'vec': queue_state
+            }
+        elif self.obs_type == 'vec':
+            state = queue_state
+        else:
+            state = img_state
+
+        return state, tot_person_delay
 
     # Execute the designated simulation step
     def simulate(self, steps_todo):

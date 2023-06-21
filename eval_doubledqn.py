@@ -4,41 +4,15 @@ import numpy as np
 
 from utils import *
 from Analysis import analysis_cv as analysis
-from SumoEnv import SumoEnv
+from test import SumoEnv
 
 from DoubleDQN import DoubleDQN
 from stable_baselines3.common.vec_env import VecNormalize, DummyVecEnv
-from stable_baselines3.common.vec_env.base_vec_env import VecEnvStepReturn
-from copy import deepcopy
-
-
-# Monkey patching the step_wait function in DummyVecEnv to solve the double reset issue
-def new_step_wait(self) -> VecEnvStepReturn:
-    # Avoid circular imports
-    for env_idx in range(self.num_envs):
-        obs, self.buf_rews[env_idx], terminated, truncated, self.buf_infos[env_idx] = self.envs[env_idx].step(
-            self.actions[env_idx]
-        )
-        # convert to SB3 VecEnv api
-        self.buf_dones[env_idx] = terminated or truncated
-        # See https://github.com/openai/gym/issues/3102
-        # Gym 0.26 introduces a breaking change
-        self.buf_infos[env_idx]["TimeLimit.truncated"] = truncated and not terminated
-
-        if self.buf_dones[env_idx]:
-            # save final observation where user can get it, then reset
-            self.buf_infos[env_idx]["terminal_observation"] = obs
-            # The code below is commented out to avoid double reset
-            # obs, self.reset_infos[env_idx] = self.envs[env_idx].reset()
-        self._save_obs(env_idx, obs)
-    return self._obs_from_buf(), np.copy(self.buf_rews), np.copy(self.buf_dones), deepcopy(self.buf_infos)
-
-
-DummyVecEnv.step_wait = new_step_wait
+from FeaturesExtractor import new_step_wait
 
 
 def test(best_model=False):
-    models_path = 'models/DoubleDQN-2023-06-19_3'
+    models_path = 'models/DoubleDQN-2023-06-20_4'
     if best_model:
         # Best model
         model_path = f'{models_path}/best_model.zip'
@@ -59,6 +33,9 @@ def test(best_model=False):
     episode = 0
     n = 50
 
+    # Monkey patching the step_wait function in DummyVecEnv to solve the double reset issue
+    DummyVecEnv.step_wait = new_step_wait
+
     while episode < n:
         print(f'Testing agent\n------ Episode {str(episode + 1)} of {n} ------')
         sumo_cmd = set_sumo(
@@ -66,7 +43,11 @@ def test(best_model=False):
             log_path=os.path.join(result_path, str(episode + 1)),
             seed=episode
         )
-        env = DummyVecEnv([lambda: SumoEnv(sumo_cmd=sumo_cmd)])
+        env = DummyVecEnv([lambda: SumoEnv(
+            sumo_cmd=sumo_cmd,
+            obs_type='comb',
+            cv_det=True
+        )])
         env = VecNormalize.load(stats_path, env)
         env.training = False
         env.norm_reward = False
@@ -88,5 +69,5 @@ def test(best_model=False):
 
 
 if __name__ == '__main__':
-    # test()
-    test(best_model=True)
+    test()
+    # test(best_model=True)
