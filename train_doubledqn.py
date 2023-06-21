@@ -1,11 +1,6 @@
 import time
 import datetime
 
-import torch as th
-import torch.nn as nn
-import numpy as np
-
-from gymnasium import spaces
 from utils import *
 from SumoEnv import SumoEnv
 
@@ -29,22 +24,14 @@ def learn(obs):
     n_envs = 4
     train_freq = 400
 
-    policy_kwargs = dict(
-        features_extractor_class=CustomCNN,
-        features_extractor_kwargs=dict(features_dim=128),
-        # share_features_extractor=False,
-        # net_arch=dict(pi=[32, 32], vf=[64, 64]),
-        # activation_fn=th.nn.ReLU,
-        normalize_images=False,
-    )
-
     env = make_vec_env(
         SumoEnv,
         n_envs=n_envs,
         vec_env_cls=SubprocVecEnv,
         env_kwargs=dict(
             sumo_cmd=sumo_cmd,
-            obs_type=obs
+            obs_type=obs,
+            cv_only=True,
         ),
     )
     env = VecNormalize(env, gamma=gamma)
@@ -65,9 +52,20 @@ def learn(obs):
     }
 
     policy_type = 'CnnPolicy'
+    features_extractor = CustomCNN
 
     if obs == 'comb':
         policy_type = 'MultiInputPolicy'
+        features_extractor = CustomCombinedExtractor
+
+    policy_kwargs = dict(
+        features_extractor_class=features_extractor,
+        features_extractor_kwargs=dict(features_dim=128),
+        # share_features_extractor=False,
+        # net_arch=dict(pi=[32, 32], vf=[64, 64]),
+        # activation_fn=th.nn.ReLU,
+        normalize_images=False,
+    )
 
     model = DoubleDQN(
         policy_type, env,

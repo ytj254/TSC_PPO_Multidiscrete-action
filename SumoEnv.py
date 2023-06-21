@@ -38,14 +38,15 @@ action_state_map = {
 
 class SumoEnv(gym.Env):
     """Custom Environment that follows gym interface
+    :param sumo_cmd: The command for the sumo.
     :param obs_type: Sets the output type ('img': image, 'vec': vector, 'comb': combined)
     for observations in the environment.
-    :param cv_det: Controls whether the only CV detection mode turn on or off.
+    :param cv_only: Controls whether only the CV can be detected.
     """
 
     metadata = {'render.modes': ['human', 'rgb_array']}
 
-    def __init__(self, sumo_cmd, obs_type='img', cv_det=False):
+    def __init__(self, sumo_cmd, obs_type='img', cv_only=False):
         super(SumoEnv, self).__init__()
         # Define action and observation space
         # They must be gym.spaces objects
@@ -69,7 +70,7 @@ class SumoEnv(gym.Env):
         else:
             self.observation_space = spaces.Box(low=0, high=255, shape=(n_channels, height, width), dtype=np.uint8)
 
-        self.cv_det = cv_det
+        self.cv_det = cv_only
         self.episode = 0
         self.total_rewards = []
         self.sumo_cmd = sumo_cmd

@@ -4,7 +4,7 @@ import numpy as np
 
 from utils import *
 from Analysis import analysis_cv as analysis
-from test import SumoEnv
+from SumoEnv import SumoEnv
 
 from DoubleDQN import DoubleDQN
 from stable_baselines3.common.vec_env import VecNormalize, DummyVecEnv
@@ -46,7 +46,7 @@ def test(best_model=False):
         env = DummyVecEnv([lambda: SumoEnv(
             sumo_cmd=sumo_cmd,
             obs_type='comb',
-            cv_det=True
+            cv_only=True
         )])
         env = VecNormalize.load(stats_path, env)
         env.training = False
