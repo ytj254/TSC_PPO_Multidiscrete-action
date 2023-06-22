@@ -11,8 +11,8 @@ from stable_baselines3.common.vec_env import VecNormalize, DummyVecEnv
 from FeaturesExtractor import new_step_wait
 
 
-def test(best_model=False):
-    models_path = 'models/DoubleDQN-2023-06-20_4'
+def test(obs_type, cv=False, best_model=False):
+    models_path = 'models/DoubleDQN-2023-06-21_1'
     if best_model:
         # Best model
         model_path = f'{models_path}/best_model.zip'
@@ -45,8 +45,8 @@ def test(best_model=False):
         )
         env = DummyVecEnv([lambda: SumoEnv(
             sumo_cmd=sumo_cmd,
-            obs_type='comb',
-            cv_only=True
+            obs_type=obs_type,
+            cv_only=cv
         )])
         env = VecNormalize.load(stats_path, env)
         env.training = False
@@ -69,5 +69,5 @@ def test(best_model=False):
 
 
 if __name__ == '__main__':
-    test()
-    # test(best_model=True)
+    test(obs_type='img', cv=True)
+    # test(obs='img', cv=True, best_model=True)

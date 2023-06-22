@@ -11,7 +11,7 @@ from stable_baselines3.common.utils import get_linear_fn
 from FeaturesExtractor import CustomCNN, CustomCombinedExtractor, SaveOnBestTrainingRewardCallback
 
 
-def learn(obs):
+def learn(obs_type, cv=False):
     start_time = time.time()
 
     alg = 'DoubleDQN'
@@ -30,8 +30,8 @@ def learn(obs):
         vec_env_cls=SubprocVecEnv,
         env_kwargs=dict(
             sumo_cmd=sumo_cmd,
-            obs_type=obs,
-            cv_only=True,
+            obs_type=obs_type,
+            cv_only=cv,
         ),
     )
     env = VecNormalize(env, gamma=gamma)
@@ -54,7 +54,7 @@ def learn(obs):
     policy_type = 'CnnPolicy'
     features_extractor = CustomCNN
 
-    if obs == 'comb':
+    if obs_type == 'comb':
         policy_type = 'MultiInputPolicy'
         features_extractor = CustomCombinedExtractor
 
@@ -100,4 +100,4 @@ def learn(obs):
 
 
 if __name__ == '__main__':
-    learn(obs='img')
+    learn(obs_type='img', cv=True)
