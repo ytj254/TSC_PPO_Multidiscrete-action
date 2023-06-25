@@ -1,52 +1,24 @@
-import gym
-import torch as th
-import torch.nn as nn
+import time
+import datetime
 import numpy as np
-
 from gymnasium import spaces
+
+import torch as th
+from torch import nn
+from test import SumoEnv
+from DoubleDQN import DoubleDQN
 from utils import *
 
+
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
+from stable_baselines3.common.env_util import make_vec_env
+from stable_baselines3.common.vec_env import VecNormalize, SubprocVecEnv, DummyVecEnv, VecMonitor
 from stable_baselines3.common.results_plotter import load_results, ts2xy
 from stable_baselines3.common.callbacks import BaseCallback
-from stable_baselines3.common.vec_env.base_vec_env import VecEnvStepReturn
-from copy import deepcopy
-
-
-class CustomCNN(BaseFeaturesExtractor):
-    """
-    :param observation_space: (gym.Space)
-    :param features_dim: (int) Number of features extracted.
-        This corresponds to the number of unit for the last layer.
-    """
-
-    def __init__(self, observation_space: gym.Space, features_dim: int = 256):
-        super().__init__(observation_space, features_dim)
-        # We assume CxHxW images (channels first)
-        # Re-ordering will be done by pre-preprocessing or wrapper
-        n_input_channels = observation_space.shape[0]
-        self.cnn = nn.Sequential(
-            nn.Conv2d(n_input_channels, 32, (2, 4), stride=(1, 2)),
-            nn.ReLU(),
-            nn.Conv2d(32, 32, kernel_size=(2, 3), stride=(1, 2)),
-            nn.ReLU(),
-            nn.Conv2d(32, 32, kernel_size=(2, 2), stride=(1, 1)),
-            nn.ReLU(),
-            nn.Flatten(),
-        )
-
-        # Compute shape by doing one forward pass
-        with th.no_grad():
-            n_flatten = self.cnn(th.as_tensor(observation_space.sample()[None]).float()).shape[1]
-
-        self.linear = nn.Sequential(nn.Linear(n_flatten, features_dim), nn.ReLU())
-
-    def forward(self, observations: th.Tensor) -> th.Tensor:
-        return self.linear(self.cnn(observations))
 
 
 class CustomCombinedExtractor(BaseFeaturesExtractor):
-    def __init__(self, observation_space: spaces.Dict, features_dim: int = 256):
+    def __init__(self, observation_space: spaces.Dict):
         # We do not know features-dim here before going over all the items,
         # so put something dummy for now. PyTorch requires calling
         # nn.Module.__init__ before adding modules
@@ -59,12 +31,25 @@ class CustomCombinedExtractor(BaseFeaturesExtractor):
         # so go over all the spaces and compute output feature sizes
         for key, subspace in observation_space.spaces.items():
             if key == "img":
-                extractors[key] = CustomCNN(subspace, features_dim=features_dim)
-                total_concat_size += features_dim
-
+                n_input_channels = subspace.shape[0]
+                extractors[key] = nn.Sequential(
+                    nn.Conv2d(n_input_channels, 32, (2, 4), stride=(1, 2)),
+                    nn.ReLU(),
+                    nn.Conv2d(32, 32, kernel_size=(2, 3), stride=(1, 2)),
+                    nn.ReLU(),
+                    nn.Conv2d(32, 32, kernel_size=(2, 2), stride=(1, 1)),
+                    nn.ReLU(),
+                    nn.Flatten(),
+                )
+                # Compute shape by doing one forward pass
+                with th.no_grad():
+                    n_flatten = extractors[key](
+                        th.as_tensor(subspace.sample()[None]).float()
+                    ).shape[1]
+                total_concat_size += n_flatten
             elif key == "vec":
-                # Just flatten it
-                extractors[key] = nn.Flatten()
+                # Run through a simple MLP
+                extractors[key] = nn.Linear(subspace.shape[0], 16)
                 total_concat_size += 16
 
         self.extractors = nn.ModuleDict(extractors)
@@ -128,23 +113,90 @@ class SaveOnBestTrainingRewardCallback(BaseCallback):
         return True
 
 
-# Monkey patching the step_wait function in DummyVecEnv to solve the double reset issue
-def new_step_wait(self) -> VecEnvStepReturn:
-    # Avoid circular imports
-    for env_idx in range(self.num_envs):
-        obs, self.buf_rews[env_idx], terminated, truncated, self.buf_infos[env_idx] = self.envs[env_idx].step(
-            self.actions[env_idx]
-        )
-        # convert to SB3 VecEnv api
-        self.buf_dones[env_idx] = terminated or truncated
-        # See https://github.com/openai/gym/issues/3102
-        # Gym 0.26 introduces a breaking change
-        self.buf_infos[env_idx]["TimeLimit.truncated"] = truncated and not terminated
+def learn():
+    start_time = time.time()
 
-        if self.buf_dones[env_idx]:
-            # save final observation where user can get it, then reset
-            self.buf_infos[env_idx]["terminal_observation"] = obs
-            # The code below is commented out to avoid double reset
-            # obs, self.reset_infos[env_idx] = self.envs[env_idx].reset()
-        self._save_obs(env_idx, obs)
-    return self._obs_from_buf(), np.copy(self.buf_rews), np.copy(self.buf_dones), deepcopy(self.buf_infos)
+    alg = 'DoubleDQN'
+    models_dir = create_folder(folders_name='models', alg=alg)
+    log_dir = create_folder(folders_name='logs', alg=alg)
+
+    sumo_cmd = set_sumo()
+    gamma = 0.65
+    n_envs = 2
+    train_freq = 400
+
+    # env = SumoEnv(sumo_cmd=sumo_cmd, obs_type='comb')
+    # env.reset()
+    # action = env.action_space.sample()
+    # env.step(action)
+    # env.close()
+
+    policy_kwargs = dict(
+        features_extractor_class=CustomCombinedExtractor,
+        # features_extractor_kwargs=dict(features_dim=128),
+        # share_features_extractor=False,
+        # net_arch=dict(pi=[32, 32], vf=[64, 64]),
+        # activation_fn=th.nn.ReLU,
+        normalize_images=False,
+    )
+
+    env = make_vec_env(
+        SumoEnv,
+        n_envs=n_envs,
+        vec_env_cls=SubprocVecEnv,
+        env_kwargs=dict(
+            sumo_cmd=sumo_cmd,
+            obs_type='comb',
+        ),
+    )
+    env = VecNormalize(env, gamma=gamma)
+    env = VecMonitor(env, log_dir)
+
+    hyperparams = {
+        "learning_rate": 0.0003,
+        "buffer_size": 50000,
+        "learning_starts": 500,
+        "batch_size": 32,
+        "gamma": gamma,
+        "train_freq": int(train_freq / n_envs),
+        "gradient_steps": 100,
+        "target_update_interval": 200,
+        "exploration_fraction": 0.2,
+        "exploration_initial_eps": 1.0,
+        "exploration_final_eps": 0.01,
+    }
+
+    model = DoubleDQN(
+        'MultiInputPolicy', env,
+        **hyperparams,
+        policy_kwargs=policy_kwargs,
+        stats_window_size=10,
+        verbose=0,
+        tensorboard_log=log_dir,
+    )
+    # print(model.policy)
+
+    check_freq = 1000
+    callback = SaveOnBestTrainingRewardCallback(
+        check_freq=int(check_freq / n_envs),
+        log_dir=log_dir,
+        save_path=models_dir,
+    )
+
+    time_steps = int(4e5)
+
+    model.learn(
+        total_timesteps=time_steps,
+        callback=callback,
+        reset_num_timesteps=False,
+        tb_log_name=alg
+    )
+    save_path = os.path.join(models_dir, 'final_model')
+    model.save(save_path)
+    stats_path = os.path.join(models_dir, 'vec_normalize.pkl')
+    env.save(stats_path)
+    print(f'Training time: {datetime.timedelta(seconds=int(time.time() - start_time))}')
+
+
+if __name__ == '__main__':
+    learn()
