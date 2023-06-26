@@ -2,9 +2,10 @@ import time
 import datetime
 
 from utils import *
-from SumoEnv import SumoEnv
+from EnvMultiDiscrete import SumoEnv
 
 from DoubleDQN import DoubleDQN
+from stable_baselines3 import DQN, PPO
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env import VecNormalize, SubprocVecEnv, DummyVecEnv, VecMonitor
 from stable_baselines3.common.utils import get_linear_fn
@@ -14,13 +15,13 @@ from FeaturesExtractor import CustomCNN, CustomCombinedExtractor, SaveOnBestTrai
 def learn(obs_type, cv=False):
     start_time = time.time()
 
-    alg = 'DoubleDQN'
+    alg = 'PPO'
     models_dir = create_folder(folders_name='models', alg=alg)
     log_dir = create_folder(folders_name='logs', alg=alg)
 
     sumo_cmd = set_sumo()
     gamma = 0.65
-    lr = get_linear_fn(0.001, 0.0003, 0.5)
+    lr = get_linear_fn(0.001, 0.0001, 0.5)
     n_envs = 4
     train_freq = 400
 
@@ -38,12 +39,12 @@ def learn(obs_type, cv=False):
     env = VecMonitor(env, log_dir)
 
     hyperparams = {
-        "learning_rate": lr,
+        "learning_rate": 0.0001,
         "buffer_size": 50000,
         "learning_starts": 500,
         "batch_size": 32,
         "gamma": gamma,
-        "train_freq": int(train_freq / n_envs),
+        "train_freq": 400,
         "gradient_steps": 100,
         "target_update_interval": 200,
         "exploration_fraction": 0.2,
@@ -51,12 +52,27 @@ def learn(obs_type, cv=False):
         "exploration_final_eps": 0.01,
     }
 
+    if alg == 'PPO':
+        hyperparams = {
+            "learning_rate": lr,
+            "n_steps": 512,
+            "batch_size": 256,
+            "n_epochs": 3,
+            "gamma": gamma,
+            # "gae_lambda": 0.95,
+            "clip_range": 0.2,
+            "max_grad_norm": 0.5,
+            "ent_coef": 0.01,
+            # "clip_range_vf": None,
+            "vf_coef": 0.5,
+        }
+
     policy_type = 'CnnPolicy'
     features_extractor = CustomCNN
 
-    if obs_type == 'comb':
-        policy_type = 'MultiInputPolicy'
-        features_extractor = CustomCombinedExtractor
+    # if obs_type == 'comb':
+    #     policy_type = 'MultiInputPolicy'
+    #     features_extractor = CustomCombinedExtractor
 
     policy_kwargs = dict(
         features_extractor_class=features_extractor,
@@ -67,7 +83,7 @@ def learn(obs_type, cv=False):
         normalize_images=False,
     )
 
-    model = DoubleDQN(
+    model = PPO(
         policy_type, env,
         **hyperparams,
         policy_kwargs=policy_kwargs,

@@ -4,24 +4,25 @@ import numpy as np
 
 from utils import *
 from Analysis import analysis_cv as analysis
-from SumoEnv import SumoEnv
+from EnvMultiDiscrete import SumoEnv
 
 from DoubleDQN import DoubleDQN
+from stable_baselines3 import DQN, PPO
 from stable_baselines3.common.vec_env import VecNormalize, DummyVecEnv
 from FeaturesExtractor import new_step_wait
 
 
 def test(obs_type, cv=False, best_model=False):
-    models_path = 'models/DoubleDQN-2023-06-21_1'
+    models_path = 'models/PPO-2023-06-25_3'
     if best_model:
         # Best model
         model_path = f'{models_path}/best_model.zip'
-        model = DoubleDQN.load(model_path)
+        model = PPO.load(model_path)
         stats_path = f'{models_path}/best_vec_normalize.pkl'
     else:
         # Final model
         model_path = f'{models_path}/final_model.zip'
-        model = DoubleDQN.load(model_path)
+        model = PPO.load(model_path)
         stats_path = f'{models_path}/vec_normalize.pkl'
 
     start_time = time.time()
@@ -69,5 +70,5 @@ def test(obs_type, cv=False, best_model=False):
 
 
 if __name__ == '__main__':
-    test(obs_type='img', cv=True)
-    # test(obs='img', cv=True, best_model=True)
+    # test(obs_type='comb', cv=True)
+    test(obs_type='img', cv=True, best_model=True)
