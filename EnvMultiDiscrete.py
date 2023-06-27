@@ -247,8 +247,8 @@ class SumoEnv(gym.Env):
             state = state.astype(np.uint8)
 
         else:
-            state = queue_state
-
+            state = queue_state / 100  # Divided by the maximum number of vehicles in a lane to normalize
+        print(state)
         return state, tot_person_delay
 
     # Execute the designated simulation step
