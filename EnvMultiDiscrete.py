@@ -58,7 +58,13 @@ class SumoEnv(gym.Env):
         self.obs_type = obs_type
 
         if self.obs_type == 'comb':
-            self.observation_space = spaces.Box(low=0, high=255, shape=(n_channels+1, height, width), dtype=np.uint8)
+            # self.observation_space = spaces.Box(low=0, high=255, shape=(n_channels+1, height, width), dtype=np.uint8)
+            self.observation_space = spaces.Dict(
+                {
+                    'img': spaces.Box(low=0, high=255, shape=(n_channels, height, width), dtype=np.uint8),
+                    'vec': spaces.Box(low=0, high=1, shape=(width,), dtype=np.float64),
+                }
+            )
 
         elif self.obs_type == 'vec':
             self.observation_space = spaces.Box(low=0, high=1, shape=(width,), dtype=np.float64)
@@ -225,29 +231,35 @@ class SumoEnv(gym.Env):
                                 width_index = int(ln_idx) + edge[0]
                                 img_state[:, height_index, width_index] = (v_occupancy, spd)
 
-        for edge in edges.values():
-            for i in range(4):
-                width_index = i + edge[0]
-                ln_id = f'{edge[1]}_{i}'
-                queue_veh_lane = traci.lane.getLastStepHaltingNumber(ln_id)
-                queue_state[width_index] = traci.lane.getLastStepHaltingNumber(ln_id)
-                tot_queue_veh += queue_veh_lane
-
         if self.obs_type == 'img':
             state = img_state
             state = state.astype(np.uint8)
-            # return state, tot_person_delay
-
-        # Count the stopped vehicles on each lane, speed <= 0.1
-        elif self.obs_type == 'comb':
-            # Concatenate the queue array with the image state, after this, the dimension is (3, 50, 16)
-            queue_array = np.zeros((1, height, width))
-            queue_array[:, 0, :] += queue_state
-            state = np.concatenate((img_state, queue_array), axis=0)
-            state = state.astype(np.uint8)
 
         else:
-            state = queue_state / 100  # Divided by the maximum number of vehicles in a lane to normalize
+            # Count the stopped vehicles on each lane, speed <= 0.1
+            for edge in edges.values():
+                for i in range(4):
+                    width_index = i + edge[0]
+                    ln_id = f'{edge[1]}_{i}'
+                    queue_veh_lane = traci.lane.getLastStepHaltingNumber(ln_id)
+                    queue_state[width_index] = traci.lane.getLastStepHaltingNumber(ln_id)
+                    tot_queue_veh += queue_veh_lane
+            queue_state = queue_state / 100  # Divided by the maximum number of vehicles in a lane to normalize
+
+            if self.obs_type == 'comb':
+                # # Concatenate the queue array with the image state, after this, the dimension is (3, 50, 16)
+                # queue_array = np.zeros((1, height, width))
+                # queue_array[:, 0, :] += queue_state
+                # state = np.concatenate((img_state, queue_array), axis=0)
+                # state = state.astype(np.uint8)
+                state = {
+                    'img': img_state,
+                    'vec': queue_state
+                }
+
+            else:  # obs_type = vec
+                state = queue_state / 100  # Divided by the maximum number of vehicles in a lane to normalize
+        # print(state)
         return state, tot_person_delay
 
     # Execute the designated simulation step

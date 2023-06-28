@@ -13,7 +13,7 @@ from FeaturesExtractor import new_step_wait
 
 
 def test(obs_type, cv=False, best_model=False):
-    models_path = 'models/PPO-2023-06-25_3'
+    models_path = 'models/PPO-2023-06-28_2'
     if best_model:
         # Best model
         model_path = f'{models_path}/best_model.zip'
@@ -70,5 +70,5 @@ def test(obs_type, cv=False, best_model=False):
 
 
 if __name__ == '__main__':
-    # test(obs_type='comb', cv=True)
-    test(obs_type='img', cv=True, best_model=True)
+    test(obs_type='comb', cv=True)
+    # test(obs_type='img', cv=True, best_model=True)
