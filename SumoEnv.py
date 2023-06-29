@@ -231,26 +231,33 @@ class SumoEnv(gym.Env):
                                 width_index = int(ln_idx) + edge[0]
                                 img_state[:, height_index, width_index] = (v_occupancy, spd)
 
-        # Count the stopped vehicles on each lane, speed <= 0.1
-        for edge in edges.values():
-            for i in range(4):
-                width_index = i + edge[0]
-                ln_id = f'{edge[1]}_{i}'
-                queue_state[width_index] = traci.lane.getLastStepHaltingNumber(ln_id)
-
-        img_state = img_state.astype(np.uint8)
-        queue_state = queue_state / 50  # 50 is the maximum number of vehicles on one lane
-
-        # Output obs according to the obs type
-        if self.obs_type == 'comb':
-            state = {
-                'img': img_state,
-                'vec': queue_state
-            }
-        elif self.obs_type == 'vec':
-            state = queue_state
-        else:
+        if self.obs_type == 'img':
             state = img_state
+            state = state.astype(np.uint8)
+
+        else:
+            # Count the stopped vehicles on each lane, speed <= 0.1
+            for edge in edges.values():
+                for i in range(4):
+                    width_index = i + edge[0]
+                    ln_id = f'{edge[1]}_{i}'
+                    queue_veh_lane = traci.lane.getLastStepHaltingNumber(ln_id)
+                    queue_state[width_index] = traci.lane.getLastStepHaltingNumber(ln_id)
+            queue_state = queue_state / 100  # Divided by the maximum number of vehicles in a lane to normalize
+
+            if self.obs_type == 'comb':
+                # # Concatenate the queue array with the image state, after this, the dimension is (3, 50, 16)
+                # queue_array = np.zeros((1, height, width))
+                # queue_array[:, 0, :] += queue_state
+                # state = np.concatenate((img_state, queue_array), axis=0)
+                # state = state.astype(np.uint8)
+                state = {
+                    'img': img_state,
+                    'vec': queue_state
+                }
+
+            else:  # obs_type = vec
+                state = queue_state / 100  # Divided by the maximum number of vehicles in a lane to normalize
 
         return state, tot_person_delay
 

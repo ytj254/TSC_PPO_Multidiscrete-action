@@ -155,7 +155,6 @@ class SumoEnv(gym.Env):
         img_state = np.zeros((n_channels, height, width))
         queue_state = np.zeros(width)
         tot_person_delay = 0
-        tot_queue_veh = 0
 
         for veh_id in traci.vehicle.getIDList():
             traci.vehicle.subscribe(veh_id, (tc.VAR_NEXT_TLS, tc.VAR_LANE_ID, tc.VAR_SPEED, tc.VAR_TYPE,
@@ -243,7 +242,6 @@ class SumoEnv(gym.Env):
                     ln_id = f'{edge[1]}_{i}'
                     queue_veh_lane = traci.lane.getLastStepHaltingNumber(ln_id)
                     queue_state[width_index] = traci.lane.getLastStepHaltingNumber(ln_id)
-                    tot_queue_veh += queue_veh_lane
             queue_state = queue_state / 100  # Divided by the maximum number of vehicles in a lane to normalize
 
             if self.obs_type == 'comb':
