@@ -15,7 +15,7 @@ height = int(detection_length / cell_length)
 car_occupancy = 1
 bus_occupancy = 1
 min_left_green_time = 5
-min_through_green_time = 5
+min_through_green_time = 12  # Used in DQN or Double-DQN to speed up the training process
 
 edges = {
     'east_edge': (0, '-E2'),
