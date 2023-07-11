@@ -210,7 +210,53 @@ def plot_learningcurve():
     plt.show()
 
 
+def plot_curves_two():
+    # Data
+    data_peak = pd.read_excel('result-analysis.xlsx', sheet_name='reward-peak')
+    data_offpeak = pd.read_excel('result-analysis.xlsx', sheet_name='reward-offpeak')
+    data_lst = [data_peak, data_offpeak]
+
+    # Create the figure and axis objects
+    fig, [ax1, ax2] = plt.subplots(2, 1, sharex='all', gridspec_kw={'hspace': 0.2}, figsize=(10, 6))
+    ax_lst = [ax1, ax2]
+    chat_names = ['Peak', 'Off-Peak']
+    font = {
+        # 'family': 'times new roman',
+        'color': 'black',
+        # 'weight': 'bold',
+        'size': 12,
+    }
+
+    for i in range(2):
+        data = data_lst[i]
+        dqn_x = data.columns[0]
+        dqn_y = data.columns[1]
+        ppo_x = data.columns[2]
+        ppo_names = data.columns[3:]
+
+        # Plotting
+        ax = ax_lst[i]
+        ax.plot(data[dqn_x], data[dqn_y], label=dqn_y, linewidth=1)
+        for ppo_name in ppo_names:
+            ax.plot(data[ppo_x], data[ppo_name], label=ppo_name, linewidth=1)
+
+        # Set the axis labels and legend
+        ax.set_ylabel('Mean episode Reward', fontdict=font)
+        ax.set_title(chat_names[i], fontdict=font)
+        ax.grid(linestyle='dashed')
+
+        # Add legend
+        ax.legend()
+
+    plt.xlabel('Training Step', fontdict=font)
+
+    # Save the figure
+    plt.savefig('Reward curve.png', dpi=300, bbox_inches='tight')
+    plt.show()
+
+
 if __name__ == '__main__':
     # plot_box()
     # plot_radar()
-    create_folder(folders_name='logs', alg='DQN')
+    # create_folder(folders_name='logs', alg='DQN')
+    plot_curves_two()
