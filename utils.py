@@ -152,15 +152,15 @@ def plot_radar():
     plt.xticks(angles[:-1], directions)
     ax.set_rlabel_position(0)
     plt.yticks([15, 30, 45, 60], ["15 s", "30 s", "45 s", "60 s"], color="grey", size=7)
-    plt.ylim(0, 60)
+    # plt.ylim(0, 60)
     ax.grid(linestyle='dashed')
 
     # Plot the data
     for i in range(len(categories)):
         values_data = data[i]
         values_data += values_data[:1]
-        ax.plot(angles, values_data, linewidth=1.5, linestyle='solid', label=categories[i],
-                marker='o', markersize=4)
+        ax.plot(angles, values_data, linewidth=1, linestyle='solid', label=categories[i],
+                marker='o', markersize=3)
         ax.fill(angles, values_data, alpha=0)
 
     fig.subplots_adjust(top=0.8)
@@ -219,7 +219,7 @@ def plot_curves_two():
     # Create the figure and axis objects
     fig, [ax1, ax2] = plt.subplots(2, 1, sharex='all', gridspec_kw={'hspace': 0.2}, figsize=(10, 6))
     ax_lst = [ax1, ax2]
-    chat_names = ['Peak', 'Off-Peak']
+    chart_names = ['Peak', 'Off-Peak']
     font = {
         # 'family': 'times new roman',
         'color': 'black',
@@ -242,7 +242,7 @@ def plot_curves_two():
 
         # Set the axis labels and legend
         ax.set_ylabel('Mean episode Reward', fontdict=font)
-        ax.set_title(chat_names[i], fontdict=font)
+        ax.set_title(chart_names[i], fontdict=font)
         ax.grid(linestyle='dashed')
 
         # Add legend
@@ -257,6 +257,6 @@ def plot_curves_two():
 
 if __name__ == '__main__':
     # plot_box()
-    # plot_radar()
+    plot_radar()
     # create_folder(folders_name='logs', alg='DQN')
-    plot_curves_two()
+    # plot_curves_two()
