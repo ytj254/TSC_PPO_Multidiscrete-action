@@ -276,7 +276,7 @@ def plot_bar():
     # Plot the bar chart for each scenario
     for i in range(2):
         ax = ax_lst[i]
-        df_lst[i] = df[i * n_controllers: (i + 1) * n_controllers].T
+        df_lst[i] = df[i * n_controllers: (i + 1) * n_controllers]
         df_lst[i].plot(ax=ax, kind='bar')
 
         # Set the axis labels and legend
