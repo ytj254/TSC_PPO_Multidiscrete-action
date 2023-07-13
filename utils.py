@@ -259,9 +259,6 @@ def plot_bar():
     # Import data
     df = pd.read_excel('result-analysis.xlsx', sheet_name='turning', header=0, index_col=0)
 
-    # Extract the directions names from the first row
-    directions = list(df.columns)
-
     n_controllers = 6
 
     # Create the figure and other objects
@@ -283,12 +280,12 @@ def plot_bar():
         df_lst[i].plot(ax=ax, kind='bar')
 
         # Set the axis labels and legend
-        ax.set_xticks(np.arange(len(directions)), directions, rotation=0)
+        ax.tick_params(axis='x', rotation=0)
         ax.set_ylabel('Average Delay (s)', fontdict=font)
         ax.set_title(chart_names[i], fontdict=font)
         ax.set_axisbelow(True)  # Set the axis below the graph element
         ax.yaxis.grid(linestyle='dashed')
-        ax.legend(loc='upper left', fontsize=8)
+        ax.legend(loc='upper right', ncol=4, fontsize=8)
 
     # Save the figure
     plt.savefig('Average Vehicle Delay in Each Direction (Bar)', dpi=300, bbox_inches='tight')
