@@ -255,6 +255,48 @@ def plot_curves_two():
     plt.show()
 
 
+def plot_bar():
+    # Import data
+    df = pd.read_excel('result-analysis.xlsx', sheet_name='turning', header=0, index_col=0)
+
+    # Extract the directions names from the first row
+    directions = list(df.columns)
+
+    n_controllers = 6
+
+    # Create the figure and other objects
+    fig, [ax1, ax2] = plt.subplots(2, 1, sharex='none', gridspec_kw={'hspace': 0.2}, figsize=(10, 8))
+    font = {
+        # 'family': 'times new roman',
+        'color': 'black',
+        # 'weight': 'bold',
+        'size': 12,
+    }
+    ax_lst = [ax1, ax2]
+    df_lst = ['df1', 'df2']
+    chart_names = ['Peak', 'Off-Peak']
+
+    # Plot the bar chart for each scenario
+    for i in range(2):
+        ax = ax_lst[i]
+        df_lst[i] = df[i * n_controllers: (i + 1) * n_controllers].T
+        df_lst[i].plot(ax=ax, kind='bar')
+
+        # Set the axis labels and legend
+        ax.set_xticks(np.arange(len(directions)), directions, rotation=0)
+        ax.set_ylabel('Average Delay (s)', fontdict=font)
+        ax.set_title(chart_names[i], fontdict=font)
+        ax.set_axisbelow(True)  # Set the axis below the graph element
+        ax.yaxis.grid(linestyle='dashed')
+        ax.legend(loc='upper left', fontsize=8)
+
+    # Save the figure
+    plt.savefig('Average Vehicle Delay in Each Direction (Bar)', dpi=300, bbox_inches='tight')
+
+    # Display the plot
+    plt.show()
+
+
 if __name__ == '__main__':
     # plot_box()
     plot_radar()
