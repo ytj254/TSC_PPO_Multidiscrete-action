@@ -297,7 +297,8 @@ def plot_bar():
 
 def plot_grouped_box():
     # Import data
-    df = pd.read_excel('result-analysis.xlsx', sheet_name='mpr-plot-offpeak')
+    sheet_name = 'mpr-plot-offpeak'
+    df = pd.read_excel('result-analysis.xlsx', sheet_name=sheet_name)
     # print(df)
 
     col_names = ['All', 'CV', 'NCV']
@@ -307,6 +308,10 @@ def plot_grouped_box():
     fig, axes = plt.subplots(2, 2, sharex='none', gridspec_kw={'hspace': 0.2}, figsize=(10, 9))
     ax1, ax2, ax3, ax4 = axes.flatten()
     axes_lst = [ax1, ax2, ax3, ax4]
+
+    baseline = 39.90
+    if sheet_name == 'mpr-plot-offpeak':
+        baseline = 27.35
 
     for i in range(4):
         a = list(range(i * 15, i * 15 + 13, 3))
@@ -334,7 +339,11 @@ def plot_grouped_box():
         ax.set_title(controllers[i])
         ax.set_axisbelow(True)  # Set the axis below the graph element
         ax.yaxis.grid(linestyle='dashed')
-        ax.legend().set_title(None)
+        # Add baseline and baseline legend
+        handles, labels = ax.get_legend_handles_labels()
+        l_base = ax.axhline(baseline, color='red', linestyle='dashed', label='Base Line', zorder=-1)
+        handles.append(l_base)
+        ax.legend(loc='upper right')
 
     plt.savefig('Delay statistics in different MPR', dpi=300, bbox_inches='tight')
     plt.show()
