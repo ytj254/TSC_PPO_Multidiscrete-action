@@ -6,6 +6,7 @@ from math import pi
 from matplotlib import pyplot as plt
 from shutil import copyfile
 from sumolib import checkBinary
+import seaborn as sns
 
 
 def create_folder(folders_name, alg):
@@ -294,8 +295,53 @@ def plot_bar():
     plt.show()
 
 
+def plot_grouped_box():
+    # Import data
+    df = pd.read_excel('result-analysis.xlsx', sheet_name='mpr-plot-offpeak')
+    # print(df)
+
+    col_names = ['All', 'CV', 'NCV']
+    mpr_lst = ['20%', '40%', '60%', '80%', '100%']
+    controllers = ['PPOSC-M-C', 'PPOSC-M', 'PPOSC', 'DDQNSC']
+
+    fig, axes = plt.subplots(2, 2, sharex='none', gridspec_kw={'hspace': 0.2}, figsize=(10, 9))
+    ax1, ax2, ax3, ax4 = axes.flatten()
+    axes_lst = [ax1, ax2, ax3, ax4]
+
+    for i in range(4):
+        a = list(range(i * 15, i * 15 + 13, 3))
+        df0 = df.iloc[:, a]
+        df1 = df.iloc[:, [j + 1 for j in a]]
+        df2 = df.iloc[:, [j + 2 for j in a]]
+        data = pd.concat(
+            [df0, pd.DataFrame(df1.values, columns=df0.columns), pd.DataFrame(df2.values, columns=df0.columns)],
+            keys=col_names)
+
+        # stack: transfer from DataFrame to Series
+        data = data.stack()
+
+        # Add column names
+        data = data.rename_axis(index=['Vehicle Type', '', 'MPR'])
+
+        # Transfer from Series to DataFrame
+        data = data.reset_index(level=[0, 2], name='Delay')
+        # Plot box plot
+        ax = axes_lst[i]
+        sns.boxplot(data=data, ax=ax, x='MPR', hue='Vehicle Type', y='Delay', linewidth=0.5, fliersize=2)
+        ax.set_xticks([0, 1, 2, 3, 4], mpr_lst)
+        ax.set_xlabel(None)
+        ax.set_ylabel('Delay (s)')
+        ax.set_title(controllers[i])
+        ax.set_axisbelow(True)  # Set the axis below the graph element
+        ax.yaxis.grid(linestyle='dashed')
+        ax.legend().set_title(None)
+
+    plt.savefig('Delay statistics in different MPR', dpi=300, bbox_inches='tight')
+    plt.show()
+
 if __name__ == '__main__':
     # plot_box()
-    plot_radar()
+    # plot_radar()
     # create_folder(folders_name='logs', alg='DQN')
     # plot_curves_two()
+    plot_bar()
